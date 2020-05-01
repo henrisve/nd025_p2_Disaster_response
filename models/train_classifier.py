@@ -18,9 +18,19 @@ import pickle
 from nltk.corpus import stopwords
 import os
 import errno
+from typing import Tuple
 
-def load_data(database_filepath):
-# load data from database
+def load_data(database_filepath: str) -> Tuple[pd.DataFrame, pd.DataFrame, list]:
+    """Load data from database
+
+    Args:
+        database_filepath: path to .db file
+
+    Returns:
+        X: Dataframe containing the Messages for training
+        Y: Dataframe containing the ground truth classes
+        category_names: List of the category class names
+    """ 
     # Make sure the file actually exist, otherwise an 
     # empty will be created
     if not os.path.exists(database_filepath):
@@ -33,12 +43,18 @@ def load_data(database_filepath):
     X = df['message']
     Y = df.drop(columns=['id','message','original','genre'])
     category_names = list(Y)
-    print(category_names)
-    print(X.shape, Y.shape)
     return X, Y, category_names
 
 
-def tokenize(text):
+def tokenize(text: str) -> list:
+    """ Method for cleaning and Tokenize a text
+
+    Args:
+        text: text to be processed into tokens
+
+    Returns:
+        clean_tokens: List of tokens
+    """ 
     url_regex = 'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
     # get list of all urls using regex
     text = re.sub(url_regex, 'urlplaceholder',text)
@@ -58,7 +74,6 @@ def tokenize(text):
     # iterate through each token
     clean_tokens = []
     for tok in tokens:
-        
         # lemmatize, normalize case, and remove leading/trailing white space
         clean_tok = lemmatizer.lemmatize(tok.strip())
         clean_tokens.append(clean_tok)
@@ -66,7 +81,14 @@ def tokenize(text):
     return clean_tokens
 
 
-def build_model():
+def build_model() -> GridSearchCV:
+    """ Method for building a model using
+    a pipeline and gridsearch
+
+    Returns:
+        cv: An object that can be used to train the model
+
+    """ 
     pipeline = Pipeline([
         ('vect', CountVectorizer(tokenizer=tokenize)),
         ('tfidf', TfidfTransformer()),
@@ -74,7 +96,7 @@ def build_model():
         
     ])
     parameters = {
-        'clf__estimator__n_estimators': [1, 2],
+        'clf__estimator__n_estimators': [1],
         #'clf__estimator__min_samples_split': [2, 4],
         #'vect__ngram_range': ((1, 1), (1, 2)),
         #'vect__max_df': (0.5, 0.75, 1.0),
@@ -85,14 +107,32 @@ def build_model():
     return cv
 
 
-def evaluate_model(model, X_test, Y_test, category_names):
+def evaluate_model(model: GridSearchCV, 
+                   X_test: pd.DataFrame, 
+                   Y_test: pd.DataFrame, 
+                   category_names: list) -> None: 
+    """ Method for evaluating the model
+
+    Args:
+        model: Model to be evaluated
+        X_test: Test data
+        Y_test: ground truth test data
+        category_names: names of the classes
+    """ 
     y_pred = model.predict(X_test)
     for i, pred in enumerate(np.swapaxes(y_pred,0,1)):
+        print(f"---------------{category_names[i]}-------------------")
         print(classification_report(Y_test.iloc[:,i].values, pred))
-        print("----------------------------------")
+        print(f"-----------------------------------------------------")
 
 
-def save_model(model, model_filepath):
+def save_model(model: GridSearchCV, model_filepath: str) -> None:
+    """ Method for saving the model into a pickel file
+
+    Args:
+        model: model to be saved
+        model_filepath: path to new file
+    """ 
     with open(model_filepath,'wb') as f:
         pickle.dump(model, f, protocol=pickle.HIGHEST_PROTOCOL)
 

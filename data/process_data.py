@@ -3,7 +3,15 @@ import pandas as pd
 import numpy as np
 from sqlalchemy import create_engine
 
-def load_data(messages_filepath, categories_filepath):
+def load_data(messages_filepath: str, categories_filepath: str) -> pd.DataFrame:
+    """A method used to load data into a dataframe
+
+    Args:
+        messages_filepath: Path to csv file that contaians messages 
+        categories_filepath: Path to to csv file that contains categories
+    Returns: 
+        df: A pandas dataframe with both csv files combined
+    """ 
     messages = pd.read_csv(messages_filepath)
     categories = pd.read_csv(categories_filepath)
     df = messages.merge(categories,on='id')
@@ -11,7 +19,15 @@ def load_data(messages_filepath, categories_filepath):
     return df
 
 
-def clean_data(df):
+def clean_data(df: pd.DataFrame) -> pd.DataFrame:
+    """Method that will clean up the dataFrame
+
+    Args:
+        df: input DataFrame
+
+    Returns:
+        df: clean Dataframe
+    """ 
     categories = df['categories'].str.split(';',expand=True)
     categories.columns = categories.loc[0].str[:-2]
     categories = categories.apply(lambda x: (x.str[-1]).astype(int))
@@ -21,7 +37,14 @@ def clean_data(df):
 
     return df
 
-def save_data(df, database_filename, table_name):
+def save_data(df: pd.DataFrame, database_filename: str, table_name: str) -> None:
+    """Save DataFrame to an SQLite database
+
+    Args:
+        df: dataFrame to be saved
+        database_filename: Filename of database
+        table_name: The name of the table
+    """ 
     engine = create_engine("sqlite:///" + database_filename)
     df.to_sql(table_name, engine, index=False)
 
