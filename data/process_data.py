@@ -1,16 +1,29 @@
 import sys
-
+import pandas as pd
+import numpy as np
+from sqlalchemy import create_engine
 
 def load_data(messages_filepath, categories_filepath):
-    pass
+    messages = pd.read_csv(messages_filepath)
+    categories = pd.read_csv(categories_filepath)
+    df = messages.merge(categories,on='id')
+
+    return df
 
 
 def clean_data(df):
-    pass
+    categories = df['categories'].str.split(';',expand=True)
+    categories.columns = categories.loc[0].str[:-2]
+    categories = categories.apply(lambda x: (x.str[-1]).astype(int))
+    df.drop(columns='categories', inplace=True)
+    df = pd.concat([df,categories],sort=False,axis=1)
+    df.drop_duplicates(inplace=True)
 
+    return df
 
-def save_data(df, database_filename):
-    pass  
+def save_data(df, database_filename, table_name):
+    engine = create_engine("sqlite:///" + database_filename)
+    df.to_sql(table_name, engine, index=False)
 
 
 def main():
@@ -26,7 +39,8 @@ def main():
         df = clean_data(df)
         
         print('Saving data...\n    DATABASE: {}'.format(database_filepath))
-        save_data(df, database_filepath)
+        table_name = "table1"
+        save_data(df, database_filepath, table_name)
         
         print('Cleaned data saved to database!')
     

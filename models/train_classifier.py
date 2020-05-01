@@ -1,24 +1,83 @@
 import sys
+# import libraries
+import pandas as pd
+import numpy as np
+from sqlalchemy import create_engine
+import nltk
+nltk.download(['punkt', 'wordnet', 'averaged_perceptron_tagger'])
 
+from sklearn.datasets import make_multilabel_classification
+from sklearn.multioutput import MultiOutputClassifier
+from sklearn.ensemble import RandomForestClassifier 
+from sklearn.model_selection import GridSearchCV
+from sklearn.pipeline import Pipeline
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
+from sklearn.metrics import classification_report
+import re
+import pickle
 
 def load_data(database_filepath):
-    pass
+# load data from database
+    engine = create_engine('sqlite:///'+database_filepath)
+    table_name = "table1"
+    sql_query = f'Select * From {table_name}'
+    df = pd.read_sql(sql_query,engine)
+    X = df['message']
+    Y = df.drop(columns=['id','message','original','genre'])
+    category_names = list(Y)
+    print(category_names)
+    print(X.shape, Y.shape)
+    return X, Y, category_names
 
-
+url_regex = 'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
 def tokenize(text):
-    pass
+    # get list of all urls using regex
+    text = re.sub(url_regex, 'urlplaceholder',text)
+    
+    #clean up and normalize
+    #text = re.sub(r"[^a-zA-Z0-9]", " ", text.lower())
+
+    # tokenize text
+    tokens = nltk.tokenize.word_tokenize(text)
+
+    # Remove stopwords
+    #tokens = [t for t in tokens if t not in stopwords.words('english')]
+
+    # initiate lemmatizer
+    lemmatizer = nltk.stem.WordNetLemmatizer() 
+
+    # iterate through each token
+    clean_tokens = []
+    for tok in tokens:
+        
+        # lemmatize, normalize case, and remove leading/trailing white space
+        clean_tok = lemmatizer.lemmatize(tok.lower().strip())
+        clean_tokens.append(clean_tok)
+
+    return clean_tokens
 
 
 def build_model():
-    pass
+    pipeline = Pipeline([
+        ('vect', CountVectorizer(tokenizer=tokenize)),
+        ('tfidf', TfidfTransformer()),
+        ('clf', MultiOutputClassifier(RandomForestClassifier()))
+        
+    ])
+    return pipeline
 
 
 def evaluate_model(model, X_test, Y_test, category_names):
-    pass
+    y_pred = model.predict(X_test)
+    for i, pred in enumerate(np.swapaxes(y_pred,0,1)):
+        print(classification_report(Y_test.iloc[:,i].values, pred))
+        print("----------------------------------")
 
 
 def save_model(model, model_filepath):
-    pass
+    with open(model_filepath,'wb') as f:
+        pickle.dump(model, f, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 def main():
@@ -50,4 +109,5 @@ def main():
 
 
 if __name__ == '__main__':
+    print("start")
     main()
