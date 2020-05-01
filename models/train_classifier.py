@@ -4,8 +4,7 @@ import pandas as pd
 import numpy as np
 from sqlalchemy import create_engine
 import nltk
-nltk.download(['punkt', 'wordnet', 'averaged_perceptron_tagger'])
-
+nltk.download(['punkt', 'wordnet', 'averaged_perceptron_tagger','stopwords'])
 from sklearn.datasets import make_multilabel_classification
 from sklearn.multioutput import MultiOutputClassifier
 from sklearn.ensemble import RandomForestClassifier 
@@ -16,9 +15,17 @@ from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.metrics import classification_report
 import re
 import pickle
+from nltk.corpus import stopwords
+import os
+import errno
 
 def load_data(database_filepath):
 # load data from database
+    # Make sure the file actually exist, otherwise an 
+    # empty will be created
+    if not os.path.exists(database_filepath):
+        raise FileNotFoundError(
+            errno.ENOENT, os.strerror(errno.ENOENT), database_filepath)
     engine = create_engine('sqlite:///'+database_filepath)
     table_name = "table1"
     sql_query = f'Select * From {table_name}'
@@ -30,19 +37,20 @@ def load_data(database_filepath):
     print(X.shape, Y.shape)
     return X, Y, category_names
 
-url_regex = 'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
+
 def tokenize(text):
+    url_regex = 'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
     # get list of all urls using regex
     text = re.sub(url_regex, 'urlplaceholder',text)
     
     #clean up and normalize
-    #text = re.sub(r"[^a-zA-Z0-9]", " ", text.lower())
+    text = re.sub(r"[^a-zA-Z0-9]", " ", text.lower())
 
     # tokenize text
     tokens = nltk.tokenize.word_tokenize(text)
 
     # Remove stopwords
-    #tokens = [t for t in tokens if t not in stopwords.words('english')]
+    tokens = [t for t in tokens if t not in stopwords.words('english')]
 
     # initiate lemmatizer
     lemmatizer = nltk.stem.WordNetLemmatizer() 
@@ -52,7 +60,7 @@ def tokenize(text):
     for tok in tokens:
         
         # lemmatize, normalize case, and remove leading/trailing white space
-        clean_tok = lemmatizer.lemmatize(tok.lower().strip())
+        clean_tok = lemmatizer.lemmatize(tok.strip())
         clean_tokens.append(clean_tok)
 
     return clean_tokens
