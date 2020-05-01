@@ -89,18 +89,16 @@ def index():
         { ## Correlation heatmap
             'data': [
                 Heatmap(
-                    z=category_corr
+                    z=category_corr,
+                    x=category_names,
+                    y=category_names
                 )
             ],
 
             'layout': {
-                'title': 'Distribution of Message Category',
-                'yaxis': {
-                    'title': "Count"
-                },
-                'xaxis': {
-                    'title': "Category"
-                }
+                'title': 'Correlation of Message Category',
+                'width':800, 
+                'height':800
             }
         }
     ]
