@@ -7,7 +7,7 @@ from nltk.tokenize import word_tokenize
 
 from flask import Flask
 from flask import render_template, request, jsonify
-from plotly.graph_objs import Bar
+from plotly.graph_objs import Bar, Heatmap
 from sklearn.externals import joblib
 from sqlalchemy import create_engine
 
@@ -37,16 +37,20 @@ model = joblib.load("../models/test.pkl")
 @app.route('/')
 @app.route('/index')
 def index():
-    
+    ''' 
+    Method to display the index page, it will generate plots etc
+    '''
     # extract data needed for visuals
     # TODO: Below is an example - modify to extract data for your own visuals
     genre_counts = df.groupby('genre').count()['message']
     genre_names = list(genre_counts.index)
-    
+    category_count = df.drop(columns=['id','message','original','genre']).sum()
+    category_names = list(category_count.index)
+    category_corr = df.drop(columns=['id','message','original','genre']).corr()
     # create visuals
     # TODO: Below is an example - modify to create your own visuals
     graphs = [
-        {
+        {  ## Genre bar plot
             'data': [
                 Bar(
                     x=genre_names,
@@ -63,9 +67,43 @@ def index():
                     'title': "Genre"
                 }
             }
+        },
+        { ## Category bar plot
+            'data': [
+                Bar(
+                    x=category_names,
+                    y=category_count
+                )
+            ],
+
+            'layout': {
+                'title': 'Distribution of Message Category',
+                'yaxis': {
+                    'title': "Count"
+                },
+                'xaxis': {
+                    'title': "Category"
+                }
+            }
+        },
+        { ## Correlation heatmap
+            'data': [
+                Heatmap(
+                    z=category_corr
+                )
+            ],
+
+            'layout': {
+                'title': 'Distribution of Message Category',
+                'yaxis': {
+                    'title': "Count"
+                },
+                'xaxis': {
+                    'title': "Category"
+                }
+            }
         }
     ]
-    
     # encode plotly graphs in JSON
     ids = ["graph-{}".format(i) for i, _ in enumerate(graphs)]
     graphJSON = json.dumps(graphs, cls=plotly.utils.PlotlyJSONEncoder)
